@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, useWindowDimensions, Image } from 'react-native';
 import { Accelerometer } from 'expo-sensors';
+import * as Haptics from 'expo-haptics';
+import Slider from '@react-native-community/slider';
 
 
 export default function App() {
   const { width, height } = useWindowDimensions();
+  const [sliderValue, setSliderValue] = useState(0);  
   const [{ x, y, z }, setData] = useState({
     x: 0,
     y: 0,
@@ -14,8 +17,11 @@ export default function App() {
   const [dx, setDx] = useState(width / 2);
   const [dy, setDy] = useState(height / 2);
 
-  const _slow = () => Accelerometer.setUpdateInterval(1000);
-  const _fast = () => Accelerometer.setUpdateInterval(100);
+  const _sliderSpeed = (value) => {
+    Accelerometer.setUpdateInterval(16)
+    setSliderValue(value)
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
+  };
 
   const _subscribe = () => {
     setSubscription(Accelerometer.addListener(setData));
@@ -32,13 +38,32 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    setDx(dx + x * 10);
-    setDy(dy - y * 10);
-    console.log('x-position:', dx, 'y-position:',  dy);
+    setDx(dx + x * sliderValue);
+    setDy(dy - y * sliderValue);
   }, [x, y]);
+
+  useEffect(() => {
+    console.log('dx', dx);
+    console.log('dy', dy);
+  }, [dx, dy]);
+
 
   return (
     <View style={styles.container}>
+      <Slider
+        onValueChange={(value) => {
+        _sliderSpeed(value);
+        console.log(value)
+
+        }}
+        step={1}
+        maximumValue={15}
+        minimumValue={0}
+        style={pageViewPositionSlider.style}
+        thumbTintColor={pageViewPositionSlider.thumbColor}
+        maximumTrackTintColor={pageViewPositionSlider.trackColor}
+        minimumTrackTintColor={pageViewPositionSlider.trackColor}
+      />
       <View>
         <Image style={{
           borderRadius: 50,
@@ -48,36 +73,27 @@ export default function App() {
           left: dx,
           backgroundColor: 'black',
           zIndex: 1,
-          transform: [{ rotate: `${z * 180 / Math.PI}deg` }],
         }}
           source={require('./assets/coolRed.jpeg')}
         />
-      </View>
-      {/* <Text style={styles.text}>Accelerometer: (in gs where 1g = 9.81 m/s^2)</Text>
-      <Text style={styles.text}>x: {x}</Text>
-      <Text style={styles.text}>y: {y}</Text>
-      <Text style={styles.text}>z: {z}</Text> */}
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity onPress={subscription ? _unsubscribe : _subscribe} style={styles.button}>
-          <Text>{subscription ? 'On' : 'Off'}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={_slow} style={[styles.button, styles.middleButton]}>
-          <Text>Slow</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={_fast} style={styles.button}>
-          <Text>Fast</Text>
-        </TouchableOpacity>
       </View>
     </View>
   );
 }
 
+const pageViewPositionSlider = {
+  trackColor: '#ABABAB',
+  thumbColor: '#1411AB',
+  style: {
+    width: '100%',
+    bottom: '-90%',
+  },
+};
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
     paddingHorizontal: 20,
-    // display: 'relative',
   },
   text: {
     textAlign: 'center',
